@@ -1,4 +1,5 @@
 import sqlite3
+from tempfile import TemporaryFile
 
 from flask_jwt import jwt_required
 from flask_restful import Resource, reqparse
@@ -31,14 +32,23 @@ class Item(Resource):
         if row:
             return {"item": row[0], "price": row[1]}
 
-    def post(self, name):
-        if self.find_by_name(name):
-            return {"message": f"An item with name '{name}' already exists"}, 400
+    def post(self, item):
+        if self.find_by_name(item):
+            return {"message": f"An item with name '{item}' already exists"}, 400
 
         data = Item.parser.parse_args()
 
-        item = {"name": name, "price": data["price"]}
+        item = {"name": item, "price": data["price"]}
 
+        try:
+            self.insert(item)
+        except:
+            return {"message": "An error occurred inserting the item."}, 500
+
+        return item, 201
+    
+    @staticmethod
+    def insert(item):
         connection = sqlite3.connect("data.db")
         cursor = connection.cursor()
 
@@ -47,8 +57,6 @@ class Item(Resource):
 
         connection.commit()
         connection.close()
-
-        return item, 201
 
     def delete(self, name):
         connection = sqlite3.connect('data.db')
