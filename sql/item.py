@@ -1,5 +1,4 @@
 import sqlite3
-from tempfile import TemporaryFile
 
 from flask_jwt import jwt_required
 from flask_restful import Resource, reqparse
@@ -46,7 +45,7 @@ class Item(Resource):
             return {"message": "An error occurred inserting the item."}, 500
 
         return item, 201
-    
+
     @staticmethod
     def insert(item):
         connection = sqlite3.connect("data.db")
@@ -59,7 +58,7 @@ class Item(Resource):
         connection.close()
 
     def delete(self, name):
-        connection = sqlite3.connect('data.db')
+        connection = sqlite3.connect("data.db")
         cursor = connection.cursor()
 
         query = "DELETE FROM items WHERE name=?"
@@ -72,14 +71,33 @@ class Item(Resource):
 
     def put(self, name):
         data = Item.parser.parse_args()
-        data["name"] = name
-        item = next((item for item in items if item["name"] == name), None)
+
+        item = self.find_by_name(name)
+        updated_item = {"name": name, "price": data["price"]}
+
         if not item:
-            item = {"name": name, "price": data["price"]}
-            items.append(item)
+            try:
+                self.insert(updated_item)
+            except:
+                return {"message": "An error occurred inserting the item."}, 500
         else:
-            item.update(data)
-        return item
+            try:
+                self.update(updated_item)
+            except:
+                return {"message": "An error occurred updating the item."}, 500
+
+        return updated_item
+
+    @staticmethod
+    def update(item):
+        connection = sqlite3.connect("data.db")
+        cursor = connection.cursor()
+
+        query = "UPDATE items SET price=?"
+        cursor.execute(query, (item["price"], item["name"]))
+
+        connection.commit()
+        connection.close()
 
 
 class ItemList(Resource):
