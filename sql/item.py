@@ -31,13 +31,13 @@ class Item(Resource):
         if row:
             return {"item": row[0], "price": row[1]}
 
-    def post(self, item):
-        if self.find_by_name(item):
-            return {"message": f"An item with name '{item}' already exists"}, 400
+    def post(self, name):
+        if self.find_by_name(name):
+            return {"message": f"An item with name '{name}' already exists"}, 400
 
         data = Item.parser.parse_args()
 
-        item = {"name": item, "price": data["price"]}
+        item = {"name": name, "price": data["price"]}
 
         try:
             self.insert(item)
@@ -93,7 +93,7 @@ class Item(Resource):
         connection = sqlite3.connect("data.db")
         cursor = connection.cursor()
 
-        query = "UPDATE items SET price=?"
+        query = "UPDATE items SET price=?, name=?"
         cursor.execute(query, (item["price"], item["name"]))
 
         connection.commit()
@@ -102,4 +102,16 @@ class Item(Resource):
 
 class ItemList(Resource):
     def get(self):
+        connection = sqlite3.connect("data.db")
+        cursor = connection.cursor()
+
+        query = "SELECT * FROM items"
+        result = cursor.execute(query)
+
+        items = []
+        for row in result:
+            items.append({"name": row[0], "price": row[1]})
+
+        connection.close()
+
         return {"items": items}
